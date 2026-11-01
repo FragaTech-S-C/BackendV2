@@ -32,7 +32,7 @@ export class GroupsService {
   }
 
   async findAll(user: { id: string; role: UserRole; institutionId?: string | null }) {
-    const where: any = {};
+    const where: any = { isBanned: false };
 
     if (user.role === UserRole.NORMAL_USER) {
       where.OR = [
@@ -113,6 +113,38 @@ export class GroupsService {
     }
 
     return this.prisma.group.delete({ where: { id } });
+  }
+
+  async banGroup(id: string, user: { id: string; role: UserRole; institutionId?: string | null }) {
+    const group = await this.prisma.group.findUnique({ where: { id } });
+    if (!group) {
+      throw new NotFoundException(`Group with ID ${id} not found`);
+    }
+    if (user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only administrators can ban groups');
+    }
+
+    return this.prisma.group.update({
+      where: { id },
+      data: { isBanned: true },
+      include: { owner: { select: userMinimalSelect } },
+    });
+  }
+
+  async unbanGroup(id: string, user: { id: string; role: UserRole; institutionId?: string | null }) {
+    const group = await this.prisma.group.findUnique({ where: { id } });
+    if (!group) {
+      throw new NotFoundException(`Group with ID ${id} not found`);
+    }
+    if (user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only administrators can unban groups');
+    }
+
+    return this.prisma.group.update({
+      where: { id },
+      data: { isBanned: false },
+      include: { owner: { select: userMinimalSelect } },
+    });
   }
 
   async joinGroup(groupId: string, userId: string) {

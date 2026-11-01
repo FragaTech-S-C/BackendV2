@@ -108,6 +108,22 @@ export class GroupsController {
     return this.groupsService.removeAdmin(groupId, userId, user);
   }
 
+  @Post(':id/ban')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Ban a group (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Group banned' })
+  async banGroup(@Param('id') id: string, @CurrentUser() user: CurrentUserInfo) {
+    return this.groupsService.banGroup(id, user);
+  }
+
+  @Post(':id/unban')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Unban a group (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Group unbanned' })
+  async unbanGroup(@Param('id') id: string, @CurrentUser() user: CurrentUserInfo) {
+    return this.groupsService.unbanGroup(id, user);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete group' })

@@ -20,7 +20,9 @@ import { UpdateEventDto } from './dto/update-event.dto';
 import { EventQueryDto } from './dto/event-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { UserRole } from '@prisma/client';
+import { EventStatus, UserRole } from '@prisma/client';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { type Response } from 'express';
 
 interface CurrentUserInfo {
@@ -91,6 +93,24 @@ export class EventsController {
   @ApiResponse({ status: 200, description: 'Event updated' })
   async update(@Param('id') id: string, @Body() updateEventDto: UpdateEventDto, @CurrentUser() user: CurrentUserInfo) {
     return this.eventsService.update(id, updateEventDto, user);
+  }
+
+  @Put(':id/ban')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Ban an event (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Event banned' })
+  async banEvent(@Param('id') id: string, @Body('reason') reason?: string) {
+    return this.eventsService.update(id, { status: EventStatus.CANCELLED, cancellationReason: reason ?? 'Banned by administrator' }, { id: 'admin', role: UserRole.ADMIN, institutionId: null });
+  }
+
+  @Put(':id/unban')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Restore an event (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Event restored' })
+  async unbanEvent(@Param('id') id: string) {
+    return this.eventsService.update(id, { status: EventStatus.PUBLISHED }, { id: 'admin', role: UserRole.ADMIN, institutionId: null });
   }
 
   @Post(':id/invite')

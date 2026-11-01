@@ -25,6 +25,18 @@ export class CreateUserDto {
   @MaxLength(50)
   lastName?: string;
 
+  @ApiPropertyOptional({ example: 'johnny' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  nickname?: string;
+
+  @ApiPropertyOptional({ example: 'https://cdn.example.com/avatar.png' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  avatar?: string;
+
   @ApiPropertyOptional({ enum: UserRole, example: UserRole.NORMAL_USER })
   @IsOptional()
   @IsEnum(UserRole)

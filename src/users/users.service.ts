@@ -68,6 +68,24 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { email }, select: userSafeSelect });
   }
 
+  async findByEmailLike(email: string) {
+    const normalized = email.trim();
+    if (!normalized) {
+      return [];
+    }
+
+    return this.prisma.user.findMany({
+      where: {
+        email: {
+          contains: normalized,
+          mode: 'insensitive',
+        },
+      },
+      select: userSafeSelect,
+      take: 10,
+    });
+  }
+
   async findByEmailWithPassword(email: string) {
     return this.prisma.user.findUnique({
       where: { email },
@@ -88,6 +106,27 @@ export class UsersService {
       data,
       select: userSafeSelect,
     });
+  }
+
+  async resetPassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { password: true, id: true } });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isCurrentPasswordValid) {
+      throw new ConflictException('Current password is invalid');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+
+    return { message: 'Password updated successfully' };
   }
 
   async updateRefreshToken(id: string, refreshToken: string | null) {

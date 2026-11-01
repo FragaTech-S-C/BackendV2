@@ -25,6 +25,12 @@ export class RegisterDto {
   @MaxLength(50)
   lastName?: string;
 
+  @ApiPropertyOptional({ example: 'johnny' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  nickname?: string;
+
   @ApiPropertyOptional({ enum: UserRole, example: UserRole.NORMAL_USER })
   @IsOptional()
   @IsEnum(UserRole)

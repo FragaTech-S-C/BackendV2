@@ -3,6 +3,7 @@ export const userSafeSelect = {
   email: true,
   firstName: true,
   lastName: true,
+  nickname: true,
   avatar: true,
   role: true,
   status: true,
@@ -22,6 +23,7 @@ export const userMinimalSelect = {
   email: true,
   firstName: true,
   lastName: true,
+  nickname: true,
   avatar: true,
   role: true,
 } as const;
@@ -31,6 +33,7 @@ export const userAuthSelect = {
   email: true,
   firstName: true,
   lastName: true,
+  nickname: true,
   avatar: true,
   role: true,
   status: true,

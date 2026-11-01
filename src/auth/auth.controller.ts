@@ -76,6 +76,16 @@ export class AuthController {
     return { message: 'Logged out successfully' };
   }
 
+  @Post('reset-password')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset the authenticated user password' })
+  @ApiResponse({ status: 200, description: 'Password updated' })
+  async resetPassword(@CurrentUser() user: any, @Body() body: { currentPassword: string; newPassword: string }) {
+    return this.authService.resetPassword(user.id, body.currentPassword, body.newPassword);
+  }
+
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

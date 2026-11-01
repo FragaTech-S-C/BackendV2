@@ -137,6 +137,10 @@ export class AuthService {
     await this.usersService.updateRefreshToken(userId, null);
   }
 
+  async resetPassword(userId: string, currentPassword: string, newPassword: string) {
+    return this.usersService.resetPassword(userId, currentPassword, newPassword);
+  }
+
   async generateTokens(user: GenerateTokensInput): Promise<AuthTokens> {
     const payload: TokenPayload = {
       sub: user.id,

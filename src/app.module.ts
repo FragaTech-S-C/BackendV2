@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
+import * as path from 'node:path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import configuration from './config/configuration';
@@ -15,13 +16,22 @@ import { SearchModule } from './search/search.module';
 import { MapsModule } from './maps/maps.module';
 import { ResourcesModule } from './resources/resources.module';
 import { TasksModule } from './tasks/tasks.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { FriendsModule } from './friends/friends.module';
+import { InvitationsModule } from './invitations/invitations.module';
+import { ReviewsModule } from './reviews/reviews.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
-      envFilePath: '.env',
+      envFilePath: [
+        path.resolve(process.cwd(), '.env'),
+        path.resolve(process.cwd(), 'backend/.env'),
+        path.resolve(__dirname, '../.env'),
+      ],
     }),
     PrismaModule,
     AuthModule,
@@ -35,6 +45,11 @@ import { TasksModule } from './tasks/tasks.module';
     MapsModule,
     ResourcesModule,
     TasksModule,
+    NotificationsModule,
+    FriendsModule,
+    InvitationsModule,
+    ReviewsModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

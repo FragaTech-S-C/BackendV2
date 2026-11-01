@@ -7,12 +7,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+}
+
 model User {
   id                    String          @id @default(uuid())
   email                 String          @unique
   password              String
   firstName             String?
   lastName              String?
+  nickname              String?
   avatar                String?
   role                  UserRole        @default(NORMAL_USER)
   status                UserStatus      @default(PENDING_VERIFICATION)
@@ -43,6 +49,22 @@ model User {
   groups                Group[]         @relation("GroupMembers")
   pendingGroupRequests  Group[]         @relation("GroupPendingRequests")
   institutionAdmins     Institution[]   @relation("InstitutionAdmins")
+  friendshipsInitiated  Friendship[]     @relation("UserFriendshipsInitiated")
+  friendshipsReceived   Friendship[]     @relation("UserFriendshipsReceived")
+}
+
+model Friendship {
+  id         String            @id @default(uuid())
+  senderId   String
+  receiverId String
+  status     FriendshipStatus   @default(PENDING)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  sender     User              @relation("UserFriendshipsInitiated", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User              @relation("UserFriendshipsReceived", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@index([receiverId, status])
 }
 
 model Institution {
@@ -93,6 +115,7 @@ model Group {
   avatar           String?
   coverImage       String?
   isPrivate        Boolean      @default(false)
+  isBanned         Boolean      @default(false)
   requiresApproval Boolean      @default(false)
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
@@ -100,6 +123,7 @@ model Group {
   institutionId    String?
   imageId          String?      @unique
   events           Event[]
+  resources        Resource[]
   image            File?        @relation("GroupImage")
   institution      Institution? @relation(fields: [institutionId], references: [id])
   owner            User         @relation("GroupOwner", fields: [ownerId], references: [id], onDelete: Cascade)
@@ -238,6 +262,7 @@ model Resource {
   institutionId String?
   groupId       String?
   event         Event?       @relation(fields: [eventId], references: [id])
+  group         Group?       @relation(fields: [groupId], references: [id])
   uploader      User         @relation("ResourceUploader", fields: [uploaderId], references: [id], onDelete: Cascade)
 }
 

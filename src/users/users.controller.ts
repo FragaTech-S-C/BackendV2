@@ -41,6 +41,13 @@ export class UsersController {
     return this.usersService.findById(req.user.id);
   }
 
+  @Get('search')
+  @ApiOperation({ summary: 'Search users by email' })
+  @ApiResponse({ status: 200, description: 'User results found' })
+  async searchUsersByEmail(@Query('email') email: string) {
+    return this.usersService.findByEmailLike(email ?? '');
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get user by ID' })
   @ApiResponse({ status: 200, description: 'User found' })
@@ -54,6 +61,13 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Profile updated' })
   async updateProfile(@Request() req: any, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(req.user.id, updateUserDto);
+  }
+
+  @Put('me/password')
+  @ApiOperation({ summary: 'Reset the current user password' })
+  @ApiResponse({ status: 200, description: 'Password updated' })
+  async resetPassword(@Request() req: any, @Body() body: { currentPassword: string; newPassword: string }) {
+    return this.usersService.resetPassword(req.user.id, body.currentPassword, body.newPassword);
   }
 
   @Put(':id')
