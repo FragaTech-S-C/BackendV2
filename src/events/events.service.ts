@@ -28,110 +28,98 @@ export class EventsService {
     return creation;
   }
 
-  async findAll(query: EventQueryDto, user: { id: string; role: UserRole; institutionId?: string | null }) {
-    // const usr = await this.prisma.user.findFirst({
-    //     where: {
-    //         id: user.id
-    //     },
-    //     select: {
-            
-    //     }
-    // });
-    const res = await this.prisma.event.findMany(
-        // {
-        //     where: {
-        //         tags: 
-        //     }
-        // }
-    );
-    console.log(res);
-    return res 
-    // const {
-    //   page = 1,
-    //   limit = 10,
-    //   search,
-    //   status,
-    //   category,
-    //   visibility,
-    //   startDateFrom,
-    //   startDateTo,
-    //   endDateFrom,
-    //   endDateTo,
-    //   city,
-    //   country,
-    //   institutionId,
-    //   boardId,
-    //   groupId,
-    //   creatorId,
-    //   assigneeId,
-    //   tags,
-    //   sortBy = 'startDate',
-    //   sortOrder = 'asc',
-    // } = query;
+  async findAll(query: EventQueryDto = {}, user: { id: string; role: UserRole; institutionId?: string | null }) {
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      status,
+      category,
+      visibility,
+      startDateFrom,
+      startDateTo,
+      endDateFrom,
+      endDateTo,
+      city,
+      country,
+      institutionId,
+      boardId,
+      groupId,
+      creatorId,
+      assigneeId,
+      tags,
+      sortBy = 'startDate',
+      sortOrder = 'asc',
+    } = query;
 
-    // const where: any = {};
+    const where: any = {
+      status: EventStatus.PUBLISHED,
+    };
 
-    // // Visibility filter based on user role
-    // if (user.role !== UserRole.ADMIN) {
-    //   where.OR = [
-    //     { visibility: EventVisibility.PUBLIC },
-    //     { institutionId: user.institutionId },
-    //     { group: { members: { some: { id: user.id } } } },
-    //   ];
-    // }
+    const accessFilters: any[] = user.role === UserRole.ADMIN ? [] : [
+      { visibility: EventVisibility.PUBLIC },
+      { creatorId: user.id },
+      { attendees: { some: { id: user.id } } },
+      ...(user.institutionId ? [{ institutionId: user.institutionId, visibility: EventVisibility.INSTITUTION }] : []),
+      { group: { members: { some: { id: user.id } } }, visibility: EventVisibility.GROUP },
+    ];
 
-    // if (search) {
-    //   where.OR = [
-    //     { title: { contains: search, mode: 'insensitive' } },
-    //     { description: { contains: search, mode: 'insensitive' } },
-    //     { tags: { hasSome: [search] } },
-    //   ];
-    // }
+    if (search) {
+      const searchFilters = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { tags: { hasSome: [search] } },
+      ];
+      where.OR = accessFilters.length > 0 ? [...accessFilters, ...searchFilters] : searchFilters;
+    } else if (accessFilters.length > 0) {
+      where.OR = accessFilters;
+    }
 
-    // if (status) where.status = status;
-    // if (category) where.category = category;
-    // if (visibility) where.visibility = visibility;
-    // if (institutionId) where.institutionId = institutionId;
-    // if (boardId) where.boardId = boardId;
-    // if (groupId) where.groupId = groupId;
-    // if (creatorId) where.creatorId = creatorId;
-    // if (assigneeId) where.assigneeId = assigneeId;
+    if (status) where.status = status;
+    if (category) where.category = category;
+    if (visibility) where.visibility = visibility;
+    if (institutionId) where.institutionId = institutionId;
+    if (boardId) where.boardId = boardId;
+    if (groupId) where.groupId = groupId;
+    if (creatorId) where.creatorId = creatorId;
+    if (assigneeId) where.assigneeId = assigneeId;
 
-    // if (startDateFrom || startDateTo) {
-    //   where.startDate = {};
-    //   if (startDateFrom) where.startDate.gte = new Date(startDateFrom);
-    //   if (startDateTo) where.startDate.lte = new Date(startDateTo);
-    // }
+    if (startDateFrom || startDateTo) {
+      where.startDate = {};
+      if (startDateFrom) where.startDate.gte = new Date(startDateFrom);
+      if (startDateTo) where.startDate.lte = new Date(startDateTo);
+    }
 
-    // if (endDateFrom || endDateTo) {
-    //   where.endDate = {};
-    //   if (endDateFrom) where.endDate.gte = new Date(endDateFrom);
-    //   if (endDateTo) where.endDate.lte = new Date(endDateTo);
-    // }
+    if (endDateFrom || endDateTo) {
+      where.endDate = {};
+      if (endDateFrom) where.endDate.gte = new Date(endDateFrom);
+      if (endDateTo) where.endDate.lte = new Date(endDateTo);
+    }
 
-    // if (city) where.city = { contains: city, mode: 'insensitive' };
-    // if (country) where.country = { contains: country, mode: 'insensitive' };
-    // if (tags && tags.length > 0) where.tags = { hasSome: tags };
+    if (city) where.city = { contains: city, mode: 'insensitive' };
+    if (country) where.country = { contains: country, mode: 'insensitive' };
+    if (tags && tags.length > 0) where.tags = { hasSome: tags };
 
-    // const [events, total] = await Promise.all([
-    //   this.prisma.event.findMany({
-    //     where,
-    //     include: {
-    //       creator: { select: userMinimalSelect },
-    //       institution: true,
-    //       board: true,
-    //       group: true,
-    //       assignee: { select: userMinimalSelect },
-    //       _count: { select: { attendees: true, resources: true, tasks: true } },
-    //     },
-    //     orderBy: { [sortBy]: sortOrder },
-    //     skip: (page - 1) * limit,
-    //     take: limit,
-    //   }),
-    //   this.prisma.event.count({ where }),
-    // ]);
+    const [events, total] = await Promise.all([
+      this.prisma.event.findMany({
+        where,
+        include: {
+          creator: { select: userMinimalSelect },
+          institution: true,
+          board: true,
+          group: true,
+          assignee: { select: userMinimalSelect },
+          attendees: { select: userMinimalSelect },
+          _count: { select: { attendees: true, resources: true, tasks: true } },
+        },
+        orderBy: { [sortBy]: sortOrder },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.event.count({ where }),
+    ]);
 
-    // return { events, total, page, limit };
+    return { events, total, page, limit };
   }
 
   async findById(id: string, user: { id: string; role: UserRole; institutionId?: string | null }) {
@@ -321,19 +309,19 @@ export class EventsService {
       startDate: { gt: new Date() },
       status: EventStatus.PUBLISHED,
     };
+
     if (user.role !== UserRole.ADMIN) {
       where.OR = [
+        { visibility: EventVisibility.PUBLIC },
         { creatorId: user.id },
         { attendees: { some: { id: user.id } } },
+        ...(user.institutionId ? [{ institutionId: user.institutionId, visibility: EventVisibility.INSTITUTION }] : []),
+        { group: { members: { some: { id: user.id } } }, visibility: EventVisibility.GROUP },
       ];
     }
-    const res = await this.prisma.event.findMany({
-      where: {
-        startDate: {
-            gt: new Date()
-        },
-        status: EventStatus.PUBLISHED
-      },
+
+    return this.prisma.event.findMany({
+      where,
       include: {
         creator: { select: userMinimalSelect },
         institution: true,
@@ -341,8 +329,34 @@ export class EventsService {
       orderBy: { startDate: 'asc' },
       take: limit,
     });
-    console.log(res);
-    return res
+  }
+
+  async getEventsById(eventId: string) {
+    if (!eventId) {
+      throw new Error('EventId is missing');
+    }
+
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      include: {
+        creator: { select: userMinimalSelect },
+        institution: true,
+        board: true,
+        group: { include: { members: { select: userMinimalSelect } } },
+        assignee: { select: userMinimalSelect },
+        resources: true,
+        tasks: true,
+        attendees: { select: userMinimalSelect },
+        eventDates: { include: { location: true, participants: { select: userMinimalSelect } } },
+        pendingEventDates: true,
+      },
+    });
+
+    if (!event) {
+      return undefined;
+    }
+
+    return event;
   }
 
   async getEventsByInterest(interests: string[], limit = 10) {
@@ -397,9 +411,10 @@ export class EventsService {
   private canViewEvent(event: any, user: { id: string; role: UserRole; institutionId?: string | null }): boolean {
     if (user.role === UserRole.ADMIN) return true;
     if (event.creatorId === user.id) return true;
+    if (event.attendees?.some((attendee: any) => attendee.id === user.id)) return true;
     if (event.visibility === EventVisibility.PUBLIC) return true;
-    if (event.institutionId && event.institutionId === user.institutionId) return true;
-    if (event.groupId && event.group?.members?.some((m: any) => m.id === user.id)) return true;
+    if (event.visibility === EventVisibility.INSTITUTION && event.institutionId && event.institutionId === user.institutionId) return true;
+    if (event.visibility === EventVisibility.GROUP && event.groupId && event.group?.members?.some((m: any) => m.id === user.id)) return true;
     return false;
   }
 

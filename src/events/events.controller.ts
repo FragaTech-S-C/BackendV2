@@ -85,7 +85,9 @@ export class EventsController {
   @ApiResponse({ status: 200, description: 'Event found' })
   @ApiResponse({ status: 404, description: 'Event not found' })
   async findById(@Param('id') id: string, @CurrentUser() user: CurrentUserInfo) {
-    return this.eventsService.findById(id, user);
+    const result = await this.eventsService.findById(id, user);
+    console.log(result);
+    return result;
   }
 
   @Put(':id')
