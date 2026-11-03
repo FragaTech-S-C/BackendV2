@@ -2,6 +2,20 @@ import { IsString, IsOptional, IsUrl, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateGroupDto {
+  @ApiPropertyOptional({ example: 'personal' })
+  @IsOptional()
+  @IsString()
+  type?: string;
+
+  @ApiPropertyOptional({ example: 'Yo' })
+  @IsOptional()
+  @IsString()
+  leader?: string;
+
+  @ApiPropertyOptional({ type: [String], example: ['user-1', 'user-2'] })
+  @IsOptional()
+  members?: string[];
+
   @ApiProperty({ example: 'Tech Enthusiasts' })
   @IsString()
   @MaxLength(100)

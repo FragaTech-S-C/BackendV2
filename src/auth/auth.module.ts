@@ -8,8 +8,9 @@ import { AuthService } from './auth.service';
 import { TwoFactorAuthService } from './services/two-factor-auth.service';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { StringValue } from 'ms';
 import { LocalStrategy } from './strategies/local.strategy';
-
+import { GoogleStrategy } from './strategies/google.strategy';
 @Module({
   imports: [
     UsersModule,
@@ -18,9 +19,9 @@ import { LocalStrategy } from './strategies/local.strategy';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         global: true,
-        secret: configService.get<string>('jwt.secret') ?? 'meetia-super-secret-key-change-in-production',
+        secret: configService.get<string>('jwt.secret'),
         signOptions: {
-          expiresIn: Number(configService.get<number>('jwt.expiresIn') ?? 86400),
+          expiresIn: configService.get<StringValue>('JWT_EXPIRES_IN', '24h'),
         },
       }),
       inject: [ConfigService],
@@ -33,6 +34,7 @@ import { LocalStrategy } from './strategies/local.strategy';
     LocalStrategy,
     JwtStrategy,
     JwtRefreshStrategy,
+    GoogleStrategy,
   ],
   exports: [AuthService],
 })

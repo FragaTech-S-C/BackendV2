@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
@@ -11,21 +11,91 @@ import { userMinimalSelect } from '../common/prisma/selects';
 export class EventsService {
   constructor(private prisma: PrismaService) {}
 
+  private async resolveCoordinatesFromAddress(
+    address?: string,
+    city?: string,
+    country?: string,
+  ): Promise<{ latitude: number; longitude: number } | null> {
+    const query = [address, city, country].filter(Boolean).join(', ').trim();
+    if (!query) {
+      return null;
+    }
+
+    try {
+      const url = new URL('https://nominatim.openstreetmap.org/search');
+      url.search = new URLSearchParams({
+        q: query,
+        format: 'jsonv2',
+        limit: '1',
+        addressdetails: '1',
+      }).toString();
+
+      const response = await fetch(url.toString(), {
+        headers: {
+          'Accept-Language': 'es',
+          'User-Agent': 'MeetiaApp/1.0',
+        },
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = await response.json();
+      const match = Array.isArray(data) ? data[0] : null;
+      if (!match) {
+        return null;
+      }
+
+      const latitude = Number(match.lat);
+      const longitude = Number(match.lon);
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        return null;
+      }
+
+      return { latitude, longitude };
+    } catch (error) {
+      return null;
+    }
+  }
+
   async create(createEventDto: CreateEventDto, userId: string) {
     const status = createEventDto.status ?? EventStatus.PUBLISHED;
     const visibility = createEventDto.visibility ?? EventVisibility.PUBLIC;
+    const institutionId = visibility === EventVisibility.INSTITUTION ? createEventDto.institutionId : undefined;
 
-    const creation = this.prisma.event.create({
-      data: {
-        ...createEventDto,
-        creatorId: userId,
-        status,
-        visibility,
-        tags: createEventDto.tags || [],
-        publishedAt: status === EventStatus.PUBLISHED ? new Date() : null,
-      },
-    });
-    return creation;
+    if (institutionId) {
+      const institution = await this.prisma.institution.findUnique({
+        where: { id: institutionId },
+        select: { id: true },
+      });
+
+      if (!institution) {
+        throw new BadRequestException('Selected institution does not exist');
+      }
+    } else if (visibility === EventVisibility.INSTITUTION) {
+      throw new BadRequestException('Institution is required for institution-scoped events');
+    }
+
+    const geocoded = createEventDto.latitude == null || createEventDto.longitude == null
+      ? await this.resolveCoordinatesFromAddress(createEventDto.location || createEventDto.address, createEventDto.city, createEventDto.country)
+      : null;
+
+    const eventPayload = {
+      ...createEventDto,
+      institutionId: visibility === EventVisibility.INSTITUTION ? institutionId : undefined,
+      latitude: createEventDto.latitude ?? geocoded?.latitude ?? null,
+      longitude: createEventDto.longitude ?? geocoded?.longitude ?? null,
+      creatorId: userId,
+      status,
+      visibility,
+      tags: createEventDto.tags || [],
+      currentAttendees: 1,
+      attendees: { connect: [{ id: userId }] },
+      publishedAt: status === EventStatus.PUBLISHED ? new Date() : null,
+    };
+
+    return this.prisma.event.create({ data: eventPayload });
   }
 
   async findAll(query: EventQueryDto = {}, user: { id: string; role: UserRole; institutionId?: string | null }) {
@@ -159,7 +229,6 @@ export class EventsService {
 
     const data: any = { ...updateEventDto };
 
-    // Handle status changes
     if (updateEventDto.status && updateEventDto.status !== event.status) {
       if (updateEventDto.status === EventStatus.PUBLISHED && event.status !== EventStatus.PUBLISHED) {
         data.publishedAt = new Date();
@@ -188,7 +257,6 @@ export class EventsService {
       throw new ForbiddenException('You do not have permission to delete this event');
     }
 
-    // Delete related data first (cascade not set on all relations)
     await Promise.all([
       this.prisma.eventDateData.deleteMany({ where: { eventId: id } }),
       this.prisma.eventDate.deleteMany({ where: { eventId: id } }),
@@ -202,9 +270,17 @@ export class EventsService {
 
   async inviteUserToEvent(
     id: string,
-    invitedUserId: string,
     user: { id: string; role: UserRole; institutionId?: string | null },
+    invited: { userId?: string; groupId?: string },
   ) {
+    if (!invited.userId && !invited.groupId) {
+      throw new BadRequestException('Either userId or groupId must be provided');
+    }
+
+    if (invited.userId && invited.groupId) {
+      throw new BadRequestException('Provide either a userId or a groupId, not both');
+    }
+
     const event = await this.prisma.event.findUnique({
       where: { id },
       include: { attendees: true },
@@ -218,23 +294,57 @@ export class EventsService {
       throw new ForbiddenException('You do not have permission to invite people to this event');
     }
 
-    if (event.creatorId === invitedUserId) {
-      throw new ForbiddenException('The event creator is already part of the event');
+    if (invited.userId) {
+      if (event.creatorId === invited.userId) {
+        throw new ForbiddenException('The event creator is already part of the event');
+      }
+
+      if (event.attendees.some((a) => a.id === invited.userId)) {
+        throw new ForbiddenException('This user is already invited or attending this event');
+      }
+
+      if (event.maxAttendees > 0 && event.currentAttendees >= event.maxAttendees) {
+        throw new ForbiddenException('Event is full');
+      }
+
+      return this.prisma.event.update({
+        where: { id },
+        data: {
+          attendees: { connect: { id: invited.userId } },
+          currentAttendees: { increment: 1 },
+        },
+        include: {
+          attendees: { select: userMinimalSelect },
+        },
+      });
     }
 
-    if (event.attendees.some((a) => a.id === invitedUserId)) {
-      throw new ForbiddenException('This user is already invited or attending this event');
+    const group = await this.prisma.group.findUnique({
+      where: { id: invited.groupId },
+      include: { members: true },
+    });
+
+    if (!group) {
+      throw new NotFoundException(`Group with ID ${invited.groupId} not found`);
     }
 
-    if (event.maxAttendees > 0 && event.currentAttendees >= event.maxAttendees) {
-      throw new ForbiddenException('Event is full');
+    const memberIds = group.members
+      .map((member) => member.id)
+      .filter((memberId) => memberId !== event.creatorId && !event.attendees.some((attendee) => attendee.id === memberId));
+
+    if (!memberIds.length) {
+      throw new ForbiddenException('All members of this group are already invited or attending the event');
+    }
+
+    if (event.maxAttendees > 0 && event.currentAttendees + memberIds.length > event.maxAttendees) {
+      throw new ForbiddenException('Adding this group would exceed the event attendee limit');
     }
 
     return this.prisma.event.update({
       where: { id },
       data: {
-        attendees: { connect: { id: invitedUserId } },
-        currentAttendees: { increment: 1 },
+        attendees: { connect: memberIds.map((memberId) => ({ id: memberId })) },
+        currentAttendees: { increment: memberIds.length },
       },
       include: {
         attendees: { select: userMinimalSelect },

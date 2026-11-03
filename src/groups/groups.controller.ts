@@ -76,6 +76,22 @@ export class GroupsController {
     return this.groupsService.leaveGroup(id, user.id);
   }
 
+  @Post(':id/members/:userId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Add a member to a group' })
+  @ApiResponse({ status: 200, description: 'Member added successfully' })
+  async addMember(@Param('id') groupId: string, @Param('userId') userId: string, @CurrentUser() user: CurrentUserInfo) {
+    return this.groupsService.addMember(groupId, userId, user);
+  }
+
+  @Delete(':id/members/:userId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Remove a member from a group' })
+  @ApiResponse({ status: 200, description: 'Member removed successfully' })
+  async removeMember(@Param('id') groupId: string, @Param('userId') userId: string, @CurrentUser() user: CurrentUserInfo) {
+    return this.groupsService.removeMember(groupId, userId, user);
+  }
+
   @Post(':id/approve/:userId')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Approve join request' })

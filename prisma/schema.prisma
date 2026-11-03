@@ -215,6 +215,7 @@ model Location {
   direction  String
   y          Float
   x          Float
+  z          Float
   review     Int[]
   eventDates EventDateData[] @relation("EventDateLocation")
 }
