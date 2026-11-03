@@ -109,38 +109,38 @@ export class AuthService {
     });
   }
 
-  async loginWithGoogle(profile: GoogleSignUpInput): Promise<AuthTokens> {
-    const normalizedEmail = profile.email.trim().toLowerCase();
-    const existingUser = await this.usersService.findByEmail(normalizedEmail);
+//   async loginWithGoogle(profile: GoogleSignUpInput): Promise<AuthTokens> {
+//     const normalizedEmail = profile.email.trim().toLowerCase();
+//     const existingUser = await this.usersService.findByEmail(normalizedEmail);
 
-    if (existingUser) {
-      return this.generateTokens({
-        id: existingUser.id,
-        email: existingUser.email,
-        role: existingUser.role as UserRole,
-        institutionId: existingUser.institutionId ?? undefined,
-      });
-    }
+//     if (existingUser) {
+//       return this.generateTokens({
+//         id: existingUser.id,
+//         email: existingUser.email,
+//         role: existingUser.role as UserRole,
+//         institutionId: existingUser.institutionId ?? undefined,
+//       });
+//     }
 
-    const createdUser = await this.usersService.create({
-      email: normalizedEmail,
-      password: `google-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`,
-      firstName: profile.firstName ?? 'Google',
-      lastName: profile.lastName ?? 'User',
-      nickname: profile.nickname ?? normalizedEmail.split('@')[0],
-      avatar: profile.avatar ?? undefined,
-      role: UserRole.NORMAL_USER,
-    });
+//     const createdUser = await this.usersService.create({
+//       email: normalizedEmail,
+//       password: `google-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`,
+//       firstName: profile.firstName ?? 'Google',
+//       lastName: profile.lastName ?? 'User',
+//       nickname: profile.nickname ?? normalizedEmail.split('@')[0],
+//       avatar: profile.avatar ?? undefined,
+//       role: UserRole.NORMAL_USER,
+//     });
 
-    await this.usersService.changeStatus(createdUser.id, UserStatus.ACTIVE);
+//     await this.usersService.changeStatus(createdUser.id, UserStatus.ACTIVE);
 
-    return this.generateTokens({
-      id: createdUser.id,
-      email: createdUser.email,
-      role: createdUser.role as UserRole,
-      institutionId: createdUser.institutionId ?? undefined,
-    });
-  }
+//     return this.generateTokens({
+//       id: createdUser.id,
+//       email: createdUser.email,
+//       role: createdUser.role as UserRole,
+//       institutionId: createdUser.institutionId ?? undefined,
+//     });
+//   }
 
   async refreshTokens(refreshToken: string): Promise<AuthTokens> {
     try {

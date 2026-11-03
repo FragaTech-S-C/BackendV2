@@ -114,40 +114,40 @@ export class AuthController {
     return this.authService.resetPasswordByEmail(body.email, body.newPassword, body.token);
   }
 
-  @Get('google')
-  @UseGuards(AuthGuard('google'))
-  @ApiOperation({ summary: 'Start Google OAuth login' })
-  async googleAuth() {
-    return;
-  }
+//   @Get('google')
+//   @UseGuards(AuthGuard('google'))
+//   @ApiOperation({ summary: 'Start Google OAuth login' })
+//   async googleAuth() {
+//     return;
+//   }
 
-  @Get('google/callback')
-  @UseGuards(AuthGuard('google'))
-  async googleAuthCallback(@Request() req: any, @Res() res: Response) {
-    const googleProfile = req.user ?? {};
-    const tokens = await this.authService.loginWithGoogle({
-      email: googleProfile.email,
-      firstName: googleProfile.firstName,
-      lastName: googleProfile.lastName,
-      nickname: googleProfile.nickname,
-      avatar: googleProfile.avatar,
-    });
+//   @Get('google/callback')
+//   @UseGuards(AuthGuard('google'))
+//   async googleAuthCallback(@Request() req: any, @Res() res: Response) {
+//     const googleProfile = req.user ?? {};
+//     const tokens = await this.authService.loginWithGoogle({
+//       email: googleProfile.email,
+//       firstName: googleProfile.firstName,
+//       lastName: googleProfile.lastName,
+//       nickname: googleProfile.nickname,
+//       avatar: googleProfile.avatar,
+//     });
 
-    const frontendUrl = this.configService.get<string>('frontend.url') ?? 'http://localhost:4321';
-    const redirectUrl = new URL(`${frontendUrl.replace(/\/+$/, '')}/auth/google/callback`);
-    redirectUrl.searchParams.set('accessToken', tokens.accessToken);
-    redirectUrl.searchParams.set('refreshToken', tokens.refreshToken);
+//     const frontendUrl = this.configService.get<string>('frontend.url') ?? 'http://localhost:4321';
+//     const redirectUrl = new URL(`${frontendUrl.replace(/\/+$/, '')}/auth/google/callback`);
+//     redirectUrl.searchParams.set('accessToken', tokens.accessToken);
+//     redirectUrl.searchParams.set('refreshToken', tokens.refreshToken);
 
-    return res.redirect(redirectUrl.toString());
-  }
+//     return res.redirect(redirectUrl.toString());
+//   }
 
-  @Post('google')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Create a user or sign in with Google profile data' })
-  @ApiResponse({ status: 200, description: 'Google login successful' })
-  async loginWithGoogle(@Body() body: { email: string; firstName?: string; lastName?: string; nickname?: string; avatar?: string }) {
-    return this.authService.loginWithGoogle(body);
-  }
+//   @Post('google')
+//   @HttpCode(HttpStatus.OK)
+//   @ApiOperation({ summary: 'Create a user or sign in with Google profile data' })
+//   @ApiResponse({ status: 200, description: 'Google login successful' })
+//   async loginWithGoogle(@Body() body: { email: string; firstName?: string; lastName?: string; nickname?: string; avatar?: string }) {
+//     return this.authService.loginWithGoogle(body);
+//   }
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
