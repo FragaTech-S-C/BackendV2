@@ -284,6 +284,36 @@ export class GroupsService {
     });
   }
 
+  async removeMember(groupId: string, userId: string, user: { id: string; role: UserRole; institutionId?: string | null }) {
+    const group = await this.findById(groupId, user);
+
+    if (!this.canManageMembers(group, user)) {
+      throw new ForbiddenException('Only the group owner or admins can remove members.');
+    }
+
+    if (group.ownerId === userId) {
+      throw new ForbiddenException('The group owner cannot be removed from the group. Transfer ownership first.');
+    }
+
+    if (!group.members.some((member: any) => member.id === userId)) {
+      throw new NotFoundException('User is not a member of this group');
+    }
+
+    return this.prisma.group.update({
+      where: { id: groupId },
+      data: {
+        members: { disconnect: { id: userId } },
+        admins: { disconnect: { id: userId } },
+        pendingRequests: { disconnect: { id: userId } },
+      },
+      include: {
+        owner: { select: userMinimalSelect },
+        members: { select: userMinimalSelect },
+        admins: { select: userMinimalSelect },
+      },
+    });
+  }
+
   private canViewGroup(group: any, user: { id: string; role: UserRole; institutionId?: string | null }): boolean {
     if (user.role === UserRole.ADMIN) return true;
     if (group.ownerId === user.id) return true;

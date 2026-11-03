@@ -117,14 +117,14 @@ export class EventsController {
 
   @Post(':id/invite')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Invite a user to an event' })
-  @ApiResponse({ status: 200, description: 'User invited successfully' })
+  @ApiOperation({ summary: 'Invite a user or an entire group to an event' })
+  @ApiResponse({ status: 200, description: 'User or group invited successfully' })
   async inviteUser(
     @Param('id') id: string,
-    @Body('userId') userId: string,
+    @Body() body: { userId?: string; groupId?: string },
     @CurrentUser() user: CurrentUserInfo,
   ) {
-    return this.eventsService.inviteUserToEvent(id, userId, user);
+    return this.eventsService.inviteUserToEvent(id, user, body);
   }
 
   @Post(':id/attend')
