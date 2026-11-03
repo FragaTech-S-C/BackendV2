@@ -62,25 +62,40 @@ export class EventsService {
   async create(createEventDto: CreateEventDto, userId: string) {
     const status = createEventDto.status ?? EventStatus.PUBLISHED;
     const visibility = createEventDto.visibility ?? EventVisibility.PUBLIC;
+    const institutionId = visibility === EventVisibility.INSTITUTION ? createEventDto.institutionId : undefined;
+
+    if (institutionId) {
+      const institution = await this.prisma.institution.findUnique({
+        where: { id: institutionId },
+        select: { id: true },
+      });
+
+      if (!institution) {
+        throw new BadRequestException('Selected institution does not exist');
+      }
+    } else if (visibility === EventVisibility.INSTITUTION) {
+      throw new BadRequestException('Institution is required for institution-scoped events');
+    }
+
     const geocoded = createEventDto.latitude == null || createEventDto.longitude == null
       ? await this.resolveCoordinatesFromAddress(createEventDto.location || createEventDto.address, createEventDto.city, createEventDto.country)
       : null;
 
-    const creation = this.prisma.event.create({
-      data: {
-        ...createEventDto,
-        latitude: createEventDto.latitude ?? geocoded?.latitude ?? null,
-        longitude: createEventDto.longitude ?? geocoded?.longitude ?? null,
-        creatorId: userId,
-        status,
-        visibility,
-        tags: createEventDto.tags || [],
-        currentAttendees: 1,
-        attendees: { connect: [{ id: userId }] },
-        publishedAt: status === EventStatus.PUBLISHED ? new Date() : null,
-      },
-    });
-    return creation;
+    const eventPayload = {
+      ...createEventDto,
+      institutionId: visibility === EventVisibility.INSTITUTION ? institutionId : undefined,
+      latitude: createEventDto.latitude ?? geocoded?.latitude ?? null,
+      longitude: createEventDto.longitude ?? geocoded?.longitude ?? null,
+      creatorId: userId,
+      status,
+      visibility,
+      tags: createEventDto.tags || [],
+      currentAttendees: 1,
+      attendees: { connect: [{ id: userId }] },
+      publishedAt: status === EventStatus.PUBLISHED ? new Date() : null,
+    };
+
+    return this.prisma.event.create({ data: eventPayload });
   }
 
   async findAll(query: EventQueryDto = {}, user: { id: string; role: UserRole; institutionId?: string | null }) {

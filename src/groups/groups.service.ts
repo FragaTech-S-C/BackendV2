@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
@@ -10,14 +10,32 @@ export class GroupsService {
   constructor(private prisma: PrismaService) {}
 
   async create(createGroupDto: CreateGroupDto, userId: string, userRole: UserRole, userInstitutionId?: string) {
+    const { type, leader, members: selectedMembers, ...groupData } = Object.fromEntries(
+      Object.entries(createGroupDto ?? {}).filter(([, value]) => value !== undefined && value !== null),
+    ) as Record<string, any>;
+
+    const institutionId = userRole === UserRole.INSTITUTIONAL_USER ? userInstitutionId : createGroupDto.institutionId;
+    if (institutionId) {
+      const institution = await this.prisma.institution.findUnique({
+        where: { id: institutionId },
+        select: { id: true },
+      });
+
+      if (!institution) {
+        throw new BadRequestException('Selected institution does not exist');
+      }
+    }
+
+    const groupPayload: any = {
+      ...groupData,
+      ownerId: userId,
+      institutionId: userRole === UserRole.INSTITUTIONAL_USER ? userInstitutionId : createGroupDto.institutionId,
+      members: { connect: [{ id: userId }] },
+      admins: { connect: [{ id: userId }] },
+    };
+
     return this.prisma.group.create({
-      data: {
-        ...createGroupDto,
-        ownerId: userId,
-        institutionId: userRole === UserRole.INSTITUTIONAL_USER ? userInstitutionId : createGroupDto.institutionId,
-        members: { connect: [{ id: userId }] },
-        admins: { connect: [{ id: userId }] },
-      },
+      data: groupPayload,
       include: {
         owner: { select: userMinimalSelect },
         institution: true,
@@ -98,9 +116,15 @@ export class GroupsService {
       throw new ForbiddenException('You do not have permission to modify this group');
     }
 
+    const { type, leader, members: selectedMembers, ...groupData } = Object.fromEntries(
+      Object.entries(updateGroupDto ?? {}).filter(([, value]) => value !== undefined && value !== null),
+    ) as Record<string, any>;
+
+    const updatePayload: any = { ...groupData };
+
     return this.prisma.group.update({
       where: { id },
-      data: updateGroupDto,
+      data: updatePayload,
       include: { owner: true, institution: true, members: true, admins: true },
     });
   }
@@ -281,6 +305,28 @@ export class GroupsService {
       where: { id: groupId },
       data: { admins: { disconnect: { id: userId } } },
       include: { admins: true },
+    });
+  }
+
+  async addMember(groupId: string, userId: string, user: { id: string; role: UserRole; institutionId?: string | null }) {
+    const group = await this.findById(groupId, user);
+
+    if (!this.canManageMembers(group, user)) {
+      throw new ForbiddenException('Only the group owner or admins can add members.');
+    }
+
+    if (group.members.some((member: any) => member.id === userId)) {
+      return group;
+    }
+
+    return this.prisma.group.update({
+      where: { id: groupId },
+      data: { members: { connect: { id: userId } } },
+      include: {
+        owner: { select: userMinimalSelect },
+        members: { select: userMinimalSelect },
+        admins: { select: userMinimalSelect },
+      },
     });
   }
 

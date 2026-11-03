@@ -72,6 +72,29 @@ describe('EventsService', () => {
     fetchMock.mockRestore();
   });
 
+  it('rejects institution-scoped events when the selected institution does not exist', async () => {
+    const prisma = {
+      institution: {
+        findUnique: jest.fn().mockResolvedValue(null),
+      },
+      event: {
+        create: jest.fn(),
+      },
+    } as unknown as PrismaService;
+
+    const service = new EventsService(prisma);
+
+    await expect(service.create({
+      title: 'Bad institution event',
+      visibility: EventVisibility.INSTITUTION,
+      institutionId: 'inst-1',
+      startDate: '2026-10-08T18:00:00.000Z',
+      endDate: '2026-10-08T20:00:00.000Z',
+    } as any, 'user_123')).rejects.toThrow('Selected institution does not exist');
+
+    expect(prisma.event.create).not.toHaveBeenCalled();
+  });
+
   it('filters private events from non-members in the dashboard event list', async () => {
     const prisma = {
       event: {
