@@ -37,7 +37,7 @@ export class NotificationsService {
   }) {
     const record: NotificationRecord = {
       id: this.generateId(),
-      userId: input.userId ?? 'local-user',
+      userId: input.userId ?? '',
       title: input.title,
       text: input.text,
       type: input.type ?? 'info',
@@ -46,7 +46,11 @@ export class NotificationsService {
       createdAt: new Date().toISOString(),
     };
 
-    this.notifications.unshift(record);
+    // const noti = await this.prisma.notifications.create({
+    //     data: {
+
+    //     }
+    // });
     return record;
   }
 

@@ -7,34 +7,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum FriendshipStatus {
-  PENDING
-  ACCEPTED
-}
-
-enum InvitationType {
-  EVENT
-  GROUP
-  FRIEND
-}
-
-enum InvitationStatus {
-  PENDING
-  ACCEPTED
-  REJECTED
-}
-
 model User {
   id                    String          @id @default(uuid())
   email                 String          @unique
   password              String
   firstName             String?
   lastName              String?
-  nickname              String?
   avatar                String?
   role                  UserRole        @default(NORMAL_USER)
   status                UserStatus      @default(PENDING_VERIFICATION)
-  isBanned             Boolean         @default(false)
   phone                 String?
   twoFactorSecret       String?
   twoFactorEnabled      Boolean         @default(false)
@@ -43,13 +24,19 @@ model User {
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
   institutionId         String?
+  nickname              String?
+  isBanned              Boolean         @default(false)
   ownedBoards           Board[]         @relation("BoardOwner")
   comments              Comment[]
   assignedEvents        Event[]         @relation("EventAssignee")
   createdEvents         Event[]         @relation("EventCreator")
   userPhoto             File?           @relation("UserPhoto")
+  friendshipsReceived   Friendship[]    @relation("UserFriendshipsReceived")
+  friendshipsInitiated  Friendship[]    @relation("UserFriendshipsInitiated")
   ownedGroups           Group[]         @relation("GroupOwner")
   ownedInstitutions     Institution[]   @relation("InstitutionOwner")
+  receivedInvitations   Invitation[]    @relation("InvitationTarget")
+  sentInvitations       Invitation[]    @relation("InvitationSender")
   messages              Message[]
   uploadedResources     Resource[]      @relation("ResourceUploader")
   assignedTasks         Task[]          @relation("TaskAssignee")
@@ -62,37 +49,51 @@ model User {
   groups                Group[]         @relation("GroupMembers")
   pendingGroupRequests  Group[]         @relation("GroupPendingRequests")
   institutionAdmins     Institution[]   @relation("InstitutionAdmins")
-  friendshipsInitiated  Friendship[]     @relation("UserFriendshipsInitiated")
-  friendshipsReceived   Friendship[]     @relation("UserFriendshipsReceived")
-  sentInvitations       Invitation[]    @relation("InvitationSender")
-  receivedInvitations   Invitation[]    @relation("InvitationTarget")
+  notificationsEmmited          Notifications[]   @relation(name: "userNotiReceived")
+ notificationsReceived          Notifications[]   @relation(name: "userSender")
+}
+
+model Notifications {
+  id         String           @id @default(uuid())
+  senderId   String
+  receiverId String
+  text       String
+  type       NotificationType?
+  date       DateTime         @default(now())
+
+  receiver User @relation(name: "userNotiReceived", fields: [receiverId], references: [id])
+
+  sender User @relation(name: "userSender",fields: [senderId],references: [id])
+}
+enum NotificationType{
+   info
 }
 
 model Invitation {
-  id           String            @id @default(uuid())
+  id           String           @id @default(uuid())
   userId       String
   targetUserId String
   type         InvitationType
   entityId     String?
   message      String?
-  status       InvitationStatus  @default(PENDING)
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  sender       User              @relation("InvitationSender", fields: [userId], references: [id], onDelete: Cascade)
-  target       User              @relation("InvitationTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  status       InvitationStatus @default(PENDING)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  target       User             @relation("InvitationTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  sender       User             @relation("InvitationSender", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([targetUserId, status])
 }
 
 model Friendship {
-  id         String            @id @default(uuid())
+  id         String           @id @default(uuid())
   senderId   String
   receiverId String
-  status     FriendshipStatus   @default(PENDING)
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
-  sender     User              @relation("UserFriendshipsInitiated", fields: [senderId], references: [id], onDelete: Cascade)
-  receiver   User              @relation("UserFriendshipsReceived", fields: [receiverId], references: [id], onDelete: Cascade)
+  status     FriendshipStatus @default(PENDING)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  receiver   User             @relation("UserFriendshipsReceived", fields: [receiverId], references: [id], onDelete: Cascade)
+  sender     User             @relation("UserFriendshipsInitiated", fields: [senderId], references: [id], onDelete: Cascade)
 
   @@unique([senderId, receiverId])
   @@index([receiverId, status])
@@ -146,19 +147,19 @@ model Group {
   avatar           String?
   coverImage       String?
   isPrivate        Boolean      @default(false)
-  isBanned         Boolean      @default(false)
   requiresApproval Boolean      @default(false)
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
   ownerId          String
   institutionId    String?
   imageId          String?      @unique
+  isBanned         Boolean      @default(false)
   events           Event[]
-  resources        Resource[]
   image            File?        @relation("GroupImage")
   institution      Institution? @relation(fields: [institutionId], references: [id])
   owner            User         @relation("GroupOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   messages         Message[]
+  resources        Resource[]
   admins           User[]       @relation("GroupAdmins")
   members          User[]       @relation("GroupMembers")
   pendingRequests  User[]       @relation("GroupPendingRequests")
@@ -171,7 +172,6 @@ model Event {
   shortDescription     String?
   category             EventCategory   @default(OTHER)
   status               EventStatus     @default(DRAFT)
-  isBanned             Boolean         @default(false)
   visibility           EventVisibility @default(PUBLIC)
   startDate            DateTime        @db.Timestamptz(6)
   endDate              DateTime        @db.Timestamptz(6)
@@ -207,6 +207,7 @@ model Event {
   boardId              String?
   institutionId        String?
   groupId              String?
+  isBanned             Boolean         @default(false)
   assignee             User?           @relation("EventAssignee", fields: [assigneeId], references: [id])
   board                Board?          @relation(fields: [boardId], references: [id])
   creator              User            @relation("EventCreator", fields: [creatorId], references: [id], onDelete: Cascade)
@@ -247,8 +248,8 @@ model Location {
   direction  String
   y          Float
   x          Float
-  z          Float
   review     Int[]
+  z          Float
   eventDates EventDateData[] @relation("EventDateLocation")
 }
 
@@ -343,6 +344,24 @@ model Report {
   comment  String
   date     DateTime   @default(now())
   proof    File[]     @relation("ReportProofs")
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum InvitationType {
+  EVENT
+  GROUP
+  FRIEND
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
 }
 
 enum UserRole {
