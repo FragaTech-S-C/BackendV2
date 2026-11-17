@@ -97,24 +97,6 @@ export class EventsController {
     return this.eventsService.update(id, updateEventDto, user);
   }
 
-  @Put(':id/ban')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Ban an event (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Event banned' })
-  async banEvent(@Param('id') id: string, @Body('reason') reason?: string) {
-    return this.eventsService.update(id, { status: EventStatus.CANCELLED, cancellationReason: reason ?? 'Banned by administrator' }, { id: 'admin', role: UserRole.ADMIN, institutionId: null });
-  }
-
-  @Put(':id/unban')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Restore an event (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Event restored' })
-  async unbanEvent(@Param('id') id: string) {
-    return this.eventsService.update(id, { status: EventStatus.PUBLISHED }, { id: 'admin', role: UserRole.ADMIN, institutionId: null });
-  }
-
   @Post(':id/invite')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Invite a user or an entire group to an event' })
@@ -157,6 +139,26 @@ export class EventsController {
   @ApiResponse({ status: 200, description: 'Successfully unattended event' })
   async unattend(@Param('id') id: string, @CurrentUser() user: CurrentUserInfo) {
     return this.eventsService.unattendEvent(id, user.id);
+  }
+
+  @Put(':id/ban')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Ban event (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Event banned' })
+  async banEvent(@Param('id') id: string, @CurrentUser() user: CurrentUserInfo) {
+    return this.eventsService.banEvent(id, user);
+  }
+
+  @Put(':id/unban')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Unban event (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Event unbanned' })
+  async unbanEvent(@Param('id') id: string, @CurrentUser() user: CurrentUserInfo) {
+    return this.eventsService.unbanEvent(id, user);
   }
 
   @Delete(':id')

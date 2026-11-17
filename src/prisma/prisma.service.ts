@@ -18,7 +18,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     const modelNames = [
       'user', 'institution', 'board', 'group', 'event', 'eventDateData',
       'eventDate', 'location', 'task', 'resource', 'comment', 'message',
-      'file', 'report'
+      'file', 'report', 'invitation'
     ];
     for (const model of modelNames) {
       if (typeof (this as any)[model]?.deleteMany === 'function') {

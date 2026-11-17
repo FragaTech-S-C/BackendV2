@@ -48,4 +48,39 @@ describe('GroupsService', () => {
 
     await expect(service.removeMember('group-2', 'ghost-1', { id: 'owner-2', role: UserRole.NORMAL_USER, institutionId: null })).rejects.toThrow(NotFoundException);
   });
+
+  it('persists the creator and invited members when creating a group', async () => {
+    const prisma = {
+      institution: {
+        findUnique: jest.fn().mockResolvedValue(null),
+      },
+      group: {
+        create: jest.fn().mockResolvedValue({ id: 'group-3', name: 'Team Dev' }),
+      },
+    } as unknown as PrismaService;
+
+    const service = new GroupsService(prisma);
+
+    await service.create(
+      { name: 'Team Dev', members: ['member-1', 'member-2'] },
+      'owner-1',
+      UserRole.NORMAL_USER,
+    );
+
+    expect(prisma.group.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          ownerId: 'owner-1',
+          members: {
+            connect: expect.arrayContaining([
+              { id: 'owner-1' },
+              { id: 'member-1' },
+              { id: 'member-2' },
+            ]),
+          },
+          admins: { connect: [{ id: 'owner-1' }] },
+        }),
+      }),
+    );
+  });
 });

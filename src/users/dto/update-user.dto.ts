@@ -24,4 +24,25 @@ export class UpdateUserDto extends PartialType(OmitType(CreateUserDto, ['email',
   @Transform(({ value }) => value === '' || value === null ? undefined : value)
   @MaxLength(500)
   avatar?: string;
+
+  @ApiPropertyOptional({ example: 'johndoe' })
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => value === '' || value === null ? undefined : value)
+  @MaxLength(50)
+  nickname?: string;
+
+  @ApiPropertyOptional({ example: 'John' })
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => value === '' || value === null ? undefined : value)
+  @MaxLength(50)
+  firstName?: string;
+
+  @ApiPropertyOptional({ example: 'Doe' })
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => value === '' || value === null ? undefined : value)
+  @MaxLength(50)
+  lastName?: string;
 }

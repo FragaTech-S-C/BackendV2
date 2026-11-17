@@ -16,6 +16,8 @@ import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 
 interface CurrentUserInfo {
@@ -31,18 +33,20 @@ interface CurrentUserInfo {
 export class GroupsController {
   constructor(private readonly groupsService: GroupsService) {}
 
-  @Post()
+  @Post('/create')
   @ApiOperation({ summary: 'Create a new group' })
   @ApiResponse({ status: 201, description: 'Group created successfully' })
   async create(@Body() createGroupDto: CreateGroupDto, @CurrentUser() user: CurrentUserInfo) {
     return this.groupsService.create(createGroupDto, user.id, user.role, user.institutionId ?? undefined);
   }
 
-  @Get()
+  @Get('/getAll')
   @ApiOperation({ summary: 'Get all groups' })
   @ApiResponse({ status: 200, description: 'List of groups' })
   async findAll(@CurrentUser() user: CurrentUserInfo) {
-    return this.groupsService.findAll(user);
+    const res = this.groupsService.findAll(user);
+    console.log(res);
+    return res;
   }
 
   @Get(':id')
@@ -124,17 +128,21 @@ export class GroupsController {
     return this.groupsService.removeAdmin(groupId, userId, user);
   }
 
-  @Post(':id/ban')
+  @Put(':id/ban')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Ban a group (Admin only)' })
+  @ApiOperation({ summary: 'Ban group (Admin only)' })
   @ApiResponse({ status: 200, description: 'Group banned' })
   async banGroup(@Param('id') id: string, @CurrentUser() user: CurrentUserInfo) {
     return this.groupsService.banGroup(id, user);
   }
 
-  @Post(':id/unban')
+  @Put(':id/unban')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Unban a group (Admin only)' })
+  @ApiOperation({ summary: 'Unban group (Admin only)' })
   @ApiResponse({ status: 200, description: 'Group unbanned' })
   async unbanGroup(@Param('id') id: string, @CurrentUser() user: CurrentUserInfo) {
     return this.groupsService.unbanGroup(id, user);

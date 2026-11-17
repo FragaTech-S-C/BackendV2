@@ -26,11 +26,12 @@ export class GroupsService {
       }
     }
 
+    const memberIds = Array.from(new Set([userId, ...(Array.isArray(selectedMembers) ? selectedMembers : [])].filter(Boolean)));
     const groupPayload: any = {
       ...groupData,
       ownerId: userId,
-      institutionId: userRole === UserRole.INSTITUTIONAL_USER ? userInstitutionId : createGroupDto.institutionId,
-      members: { connect: [{ id: userId }] },
+      ...(institutionId ? { institutionId } : {}),
+      members: { connect: memberIds.map((id) => ({ id })) },
       admins: { connect: [{ id: userId }] },
     };
 
@@ -50,26 +51,35 @@ export class GroupsService {
   }
 
   async findAll(user: { id: string; role: UserRole; institutionId?: string | null }) {
+    console.log("HOLAAAAAAAAAA")
     const where: any = { isBanned: false };
 
+    // Only show groups the user is a member of, admin of, or owner of
+    // Public groups are discoverable separately via discover endpoint
     if (user.role === UserRole.NORMAL_USER) {
       where.OR = [
-        { isPrivate: false },
         { ownerId: user.id },
         { members: { some: { id: user.id } } },
         { admins: { some: { id: user.id } } },
       ];
     } else if (user.role === UserRole.INSTITUTIONAL_USER) {
       where.OR = [
-        { isPrivate: false },
         { ownerId: user.id },
         { institutionId: user.institutionId },
         { members: { some: { id: user.id } } },
         { admins: { some: { id: user.id } } },
       ];
+    } else if (user.role === UserRole.ADMIN) {
+      // Admin sees all groups
+    } else {
+      where.OR = [
+        { ownerId: user.id },
+        { members: { some: { id: user.id } } },
+        { admins: { some: { id: user.id } } },
+      ];
     }
 
-    return this.prisma.group.findMany({
+    const prismaRes = await this.prisma.group.findMany({
       where,
       include: {
         owner: { select: userMinimalSelect },
@@ -81,6 +91,8 @@ export class GroupsService {
       },
       orderBy: { createdAt: 'desc' },
     });
+    console.log(prismaRes);
+    return prismaRes;
   }
 
   async findById(id: string, user: { id: string; role: UserRole; institutionId?: string | null }) {

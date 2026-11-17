@@ -97,6 +97,24 @@ export class UsersController {
     return this.usersService.changeRole(id, role);
   }
 
+//   @Put(':id/ban')
+//   @UseGuards(RolesGuard)
+//   @Roles(UserRole.ADMIN)
+//   @ApiOperation({ summary: 'Ban user (Admin only)' })
+//   @ApiResponse({ status: 200, description: 'User banned' })
+//   async banUser(@Param('id') id: string) {
+//     return this.usersService.banUser(id);
+//   }
+
+//   @Put(':id/unban')
+//   @UseGuards(RolesGuard)
+//   @Roles(UserRole.ADMIN)
+//   @ApiOperation({ summary: 'Unban user (Admin only)' })
+//   @ApiResponse({ status: 200, description: 'User unbanned' })
+//   async unbanUser(@Param('id') id: string) {
+//     return this.usersService.unbanUser(id);
+//   }
+
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)

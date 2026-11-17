@@ -175,6 +175,24 @@ export class UsersService {
     });
   }
 
+//   async banUser(id: string) {
+//     await this.findById(id);
+//     return this.prisma.user.update({
+//       where: { id },
+//       data: { isBanned: true },
+//       select: userSafeSelect,
+//     });
+//   }
+
+//   async unbanUser(id: string) {
+//     await this.findById(id);
+//     return this.prisma.user.update({
+//       where: { id },
+//       data: { isBanned: false },
+//       select: userSafeSelect,
+//     });
+//   }
+
   async disableTwoFactor(id: string) {
     await this.findById(id);
     return this.prisma.user.update({

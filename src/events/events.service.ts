@@ -518,6 +518,22 @@ export class EventsService {
     });
   }
 
+  async banEvent(id: string, user: { id: string; role: UserRole; institutionId?: string | null }) {
+    const event = await this.findById(id, user);
+    return this.prisma.event.update({
+      where: { id },
+      data: { isBanned: true },
+    });
+  }
+
+  async unbanEvent(id: string, user: { id: string; role: UserRole; institutionId?: string | null }) {
+    const event = await this.findById(id, user);
+    return this.prisma.event.update({
+      where: { id },
+      data: { isBanned: false },
+    });
+  }
+
   private canViewEvent(event: any, user: { id: string; role: UserRole; institutionId?: string | null }): boolean {
     if (user.role === UserRole.ADMIN) return true;
     if (event.creatorId === user.id) return true;

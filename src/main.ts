@@ -4,11 +4,17 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express'
 import { ConfigService } from '@nestjs/config';
-
+import { readFileSync } from 'fs';
 async function bootstrap() {
+//    const httpsOptions = {
+//        key: readFileSync('./certs/localhost-key.pem'),
+//        cert: readFileSync('./certs/localhost.pem'),
+//    };
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule,
     {
-        bodyParser: false
+        bodyParser: false,
+        // httpsOptions: httpsOptions
     }
   );
   app.useBodyParser('json', { limit: '15mb'})
@@ -28,7 +34,7 @@ async function bootstrap() {
   );
 
   app.setGlobalPrefix('api');
-
+  
   const config = new DocumentBuilder()
     .setTitle('Meetia API')
     .setDescription('Meetia - Event Management and Coordination Platform')

@@ -12,6 +12,18 @@ enum FriendshipStatus {
   ACCEPTED
 }
 
+enum InvitationType {
+  EVENT
+  GROUP
+  FRIEND
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
 model User {
   id                    String          @id @default(uuid())
   email                 String          @unique
@@ -22,6 +34,7 @@ model User {
   avatar                String?
   role                  UserRole        @default(NORMAL_USER)
   status                UserStatus      @default(PENDING_VERIFICATION)
+  isBanned             Boolean         @default(false)
   phone                 String?
   twoFactorSecret       String?
   twoFactorEnabled      Boolean         @default(false)
@@ -51,6 +64,24 @@ model User {
   institutionAdmins     Institution[]   @relation("InstitutionAdmins")
   friendshipsInitiated  Friendship[]     @relation("UserFriendshipsInitiated")
   friendshipsReceived   Friendship[]     @relation("UserFriendshipsReceived")
+  sentInvitations       Invitation[]    @relation("InvitationSender")
+  receivedInvitations   Invitation[]    @relation("InvitationTarget")
+}
+
+model Invitation {
+  id           String            @id @default(uuid())
+  userId       String
+  targetUserId String
+  type         InvitationType
+  entityId     String?
+  message      String?
+  status       InvitationStatus  @default(PENDING)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  sender       User              @relation("InvitationSender", fields: [userId], references: [id], onDelete: Cascade)
+  target       User              @relation("InvitationTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@index([targetUserId, status])
 }
 
 model Friendship {
@@ -140,6 +171,7 @@ model Event {
   shortDescription     String?
   category             EventCategory   @default(OTHER)
   status               EventStatus     @default(DRAFT)
+  isBanned             Boolean         @default(false)
   visibility           EventVisibility @default(PUBLIC)
   startDate            DateTime        @db.Timestamptz(6)
   endDate              DateTime        @db.Timestamptz(6)
