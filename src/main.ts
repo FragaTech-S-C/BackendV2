@@ -53,13 +53,13 @@ async function bootstrap() {
     .addTag('tasks', 'Task and time management')
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+//   const document = SwaggerModule.createDocument(app, config);
+//   SwaggerModule.setup('api/docs', app, document);
 
-  const port = configService.get('port');
-  await app.listen(port);
-  console.log(`Application running on port ${port}`);
-  console.log(`Swagger docs available at http://localhost:${port}/api/docs`);
+//   const port = configService.get('port');
+  await app.init();
+//   console.log(`Application running on port ${port}`);
+//   console.log(`Swagger docs available at http://localhost:${port}/api/docs`);
 }
 
 bootstrap();
