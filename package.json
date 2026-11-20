@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "@nestjs/common": "11",
-    "@nestjs/config": "^12.1.1",
+    "@nestjs/config": "3",
     "@nestjs/core": "11",
     "@nestjs/jwt": "11",
     "@nestjs/observe": "^0.3.0",
