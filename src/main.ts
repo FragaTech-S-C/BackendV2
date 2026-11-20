@@ -48,8 +48,6 @@ async function bootstrap() {
     }),
   );
 
-  app.setGlobalPrefix('api');
-
   const config = new DocumentBuilder()
     .setTitle('Meetia API')
     .setDescription('Meetia - Event Management and Coordination Platform')
