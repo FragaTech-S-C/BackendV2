@@ -14,7 +14,28 @@ async function bootstrap() {
   app.useBodyParser('json', { limit: '15mb'})
   const configService = app.get(ConfigService);
 
-  app.enableCors(configService.get('cors'));
+  const allowedOrigins = [
+    'https://meetia-sigma.vercel.app',
+    'http://localhost:4321',
+    'http://localhost:3000',
+  ];
+
+  app.enableCors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const isAllowed =
+        allowedOrigins.includes(origin) ||
+        /^https:\/\/[a-z0-9-]+-meetia1\.vercel\.app$/i.test(origin);
+
+      if (isAllowed) {
+        return callback(null, true);
+      }
+      return callback(new Error(`Origin ${origin} not allowed by CORS`));
+    },
+    credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
